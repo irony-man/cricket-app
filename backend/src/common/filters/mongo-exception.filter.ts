@@ -25,6 +25,7 @@ export class MongoExceptionFilter implements ExceptionFilter {
       });
     } else {
       // For other MongoErrors, send a generic error
+      console.error(exception);
       response.status(500).json({
         statusCode: 500,
         message: 'Internal server error',

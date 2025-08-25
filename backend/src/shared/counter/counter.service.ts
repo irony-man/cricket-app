@@ -12,9 +12,16 @@ export class CounterService {
   async getNextSequence(modelIdentifier: string): Promise<number> {
     const counter = await this.counterModel.findOneAndUpdate(
       { modelName: modelIdentifier },
-      {
-        $inc: { count: 1 },
-      },
+      [
+        {
+          $set: {
+            count: {
+              $add: [{ $ifNull: ['$count', 1000] }, 1],
+            },
+            modelName: modelIdentifier,
+          },
+        },
+      ],
       { new: true, upsert: true },
     );
     return counter.count;
