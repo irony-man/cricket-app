@@ -18,6 +18,7 @@ import {
 } from 'src/commentary/dto/commentary.dto';
 import { Commentary } from 'src/commentary/schemas/commentary.schema';
 import { CommentaryService } from 'src/commentary/commentary.service';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class MatchesService {
@@ -27,6 +28,7 @@ export class MatchesService {
     private readonly playerService: PlayersService,
     private readonly counterService: CounterService,
     private readonly commentaryService: CommentaryService,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
@@ -72,21 +74,19 @@ export class MatchesService {
     if (teamIds) {
       const teams = await this.playerService.findTeamsByTeamIds(teamIds);
       updatePayload.teams = teams.map((team) => team._id);
-    }
 
-    if (toss) {
-      const tossWinnerTeam = await this.teamModel
-        .findOne({ teamId: toss.winner })
-        .exec();
-      if (!tossWinnerTeam) {
-        throw new BadRequestException(
-          `Toss winner with teamId "${toss.winner}" does not exist.`,
-        );
+      if (toss) {
+        const tossWinnerTeam = teams.find((t) => t.teamId === toss.winner);
+        if (!tossWinnerTeam) {
+          throw new BadRequestException(
+            `Toss winner with teamId "${toss.winner}" is not one of the playing teams.`,
+          );
+        }
+        updatePayload.toss = {
+          winner: tossWinnerTeam._id,
+          decision: toss.decision,
+        };
       }
-      updatePayload.toss = {
-        winner: tossWinnerTeam._id,
-        decision: toss.decision,
-      };
     }
 
     const updatedMatch = await this.matchModel
@@ -98,6 +98,9 @@ export class MatchesService {
     if (!updatedMatch) {
       throw new NotFoundException(`Match with ID "${matchId}" not found.`);
     }
+
+    const redisPublisher = this.redisService.getPublisher();
+    void redisPublisher.publish('match-updates', JSON.stringify(updatedMatch));
 
     return updatedMatch;
   }

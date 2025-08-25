@@ -8,7 +8,6 @@ import Input from "@/ui/input";
 import Button from "@/ui/button";
 import Select from "@/ui/select";
 
-// Helper to format player data for the Select component
 const toPlayerOption = (player: Player) => ({
     value: player.playerId,
     name: player.name,
@@ -20,7 +19,7 @@ interface CommentaryFormProp {
 
 const CommentaryForm: React.FC<CommentaryFormProp> = ({ match }) => {
     const getInitialState = () => ({
-        teamId: match.toss.winner?.teamId.toString() || "",
+        team: match.toss.winner?.teamId.toString() || "",
         striker: "",
         non_striker: "",
         bowler: "",
@@ -34,7 +33,7 @@ const CommentaryForm: React.FC<CommentaryFormProp> = ({ match }) => {
     const [message, setMessage] = useState("");
 
     const { battingPlayers, bowlingPlayers } = useMemo(() => {
-        const selectedTeamId = parseInt(formData.teamId);
+        const selectedTeamId = parseInt(formData.team);
         const battingTeam = match.teams.find(
             (team) => team.teamId === selectedTeamId
         );
@@ -42,11 +41,21 @@ const CommentaryForm: React.FC<CommentaryFormProp> = ({ match }) => {
             (team) => team.teamId !== selectedTeamId
         );
 
+        const battingPlayers = battingTeam?.players?.map(toPlayerOption) || [];
+        const bowlingPlayers = bowlingTeam?.players?.map(toPlayerOption) || [];
+
+        setFormData((prev) => ({
+            ...prev,
+            striker: String(battingPlayers[0]?.value || ""),
+            non_striker: String(battingPlayers[1]?.value || ""),
+            bowler: String(bowlingPlayers[0]?.value || ""),
+        }));
+
         return {
-            battingPlayers: battingTeam?.players.map(toPlayerOption) || [],
-            bowlingPlayers: bowlingTeam?.players.map(toPlayerOption) || [],
+            battingPlayers,
+            bowlingPlayers,
         };
-    }, [formData.teamId, match.teams]);
+    }, [formData.team, match.teams]);
 
     const teamChoices = useMemo(
         () =>
@@ -69,7 +78,7 @@ const CommentaryForm: React.FC<CommentaryFormProp> = ({ match }) => {
         setMessage("");
 
         const payload = {
-            teamId: parseInt(formData.teamId),
+            team: parseInt(formData.team),
             striker: parseInt(formData.striker),
             non_striker: parseInt(formData.non_striker),
             bowler: parseInt(formData.bowler),
@@ -86,8 +95,14 @@ const CommentaryForm: React.FC<CommentaryFormProp> = ({ match }) => {
                 payload
             );
             setMessage(`Commentary added successfully!`);
-            setFormData(getInitialState()); // Reset form
-        } catch (error: any) {
+            setFormData((prev) => {
+                return {
+                    ...getInitialState(),
+                    ...prev,
+                    ball: String(parseInt(prev.ball) + 1),
+                };
+            });
+        } catch (error) {
             setMessage(
                 `Error: ${error?.message || "An unknown error occurred"}`
             );
@@ -97,11 +112,11 @@ const CommentaryForm: React.FC<CommentaryFormProp> = ({ match }) => {
     return (
         <form onSubmit={handleSubmit} className="form commentaryForm">
             <div className="formGroup">
-                <Label htmlFor="teamId">Batting Team</Label>
+                <Label htmlFor="team">Batting Team</Label>
                 <Select
-                    id="teamId"
-                    name="teamId"
-                    value={formData.teamId}
+                    id="team"
+                    name="team"
+                    value={formData.team}
                     onChange={handleChange}
                     choices={teamChoices}
                     required

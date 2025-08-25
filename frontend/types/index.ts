@@ -42,3 +42,12 @@ export interface MatchDetail {
   match: Match;
   commentaries: Commentary[];
 }
+
+export interface ServerToClientEvents {
+  "new-commentary": (commentary: Commentary) => void;
+  "update-match": (match: Match) => void;
+}
+
+export interface ClientToServerEvents {
+  "subscribe-to-match": (matchId: string) => void;
+}

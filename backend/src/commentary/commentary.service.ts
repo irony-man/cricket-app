@@ -118,7 +118,7 @@ export class CommentaryService {
     }
     const commentaries = await this.commentaryModel
       .find({ match: match._id })
-      .populate(['team', 'striker', 'non_striker', 'bowler'])
+      .populate(['team', 'striker', 'non_striker', 'bowler', 'match'])
       .sort({ createdAt: -1 })
       .exec();
 

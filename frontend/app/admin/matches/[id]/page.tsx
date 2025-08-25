@@ -21,7 +21,7 @@ export default function Page({ params }) {
         <div className="container">
             <Breadcrumb links={breadcrumbLinks} />
             <div className="mx-auto">
-                <MatchDetail {...match} />
+                <MatchDetail status {...match} />
                 <div style={{marginTop: '1rem'}}>
                     <CommentaryForm match={match.match} />
                 </div>

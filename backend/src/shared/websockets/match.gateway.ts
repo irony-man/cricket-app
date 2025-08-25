@@ -7,7 +7,7 @@ import { RedisService } from '../../redis/redis.service';
 import { OnModuleInit } from '@nestjs/common';
 
 @WebSocketGateway({ cors: { origin: '*' } })
-export class CommentaryGateway implements OnModuleInit {
+export class MatchGateway implements OnModuleInit {
   @WebSocketServer()
   server: Server;
 
@@ -16,11 +16,9 @@ export class CommentaryGateway implements OnModuleInit {
   onModuleInit() {
     void this.redisService
       .getSubscriber()
-      .subscribe('commentary-updates', (message) => {
-        const commentary = JSON.parse(message);
-        this.server
-          .to(`match_${commentary.matchId}`)
-          .emit('new-commentary', commentary);
+      .subscribe('match-updates', (message) => {
+        const match = JSON.parse(message);
+        this.server.to(`match_${match.matchId}`).emit('update-match', match);
       });
   }
 

@@ -8,6 +8,7 @@ import { TeamsModule } from 'src/teams/teams.module';
 import { Team, TeamSchema } from 'src/teams/schemas/team.schema';
 import { PlayersModule } from 'src/players/players.module';
 import { CommentaryModule } from 'src/commentary/commentary.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CommentaryModule } from 'src/commentary/commentary.module';
     TeamsModule,
     PlayersModule,
     CommentaryModule,
+    RedisModule,
   ],
   controllers: [MatchesController],
   providers: [MatchesService],

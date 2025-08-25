@@ -1,46 +1,45 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from "react";
-import io from "socket.io-client";
+import { useState, useCallback } from "react";
 import { Match, Commentary } from "@/types";
+import { useMatchSocket } from "@/hooks/useMatchSocket";
 import MatchInfoCard from "./match-info-card";
 import CommentaryFeed from "../commentary/commentary-feed";
-import Loader from "@/ui/loader";
+import MatchStatus from "./match-status";
 
 interface MatchDetailProps {
-  match: Match;
-  commentary?: Commentary[];
+    match: Match;
+    commentary?: Commentary[];
+    status?: boolean;
 }
 
-const MatchDetail: React.FC<MatchDetailProps> = ({ match, commentary: commentaryData }) => {
-  const [commentary, setCommentary] = useState<Commentary[]>(commentaryData || []);
+const MatchDetail: React.FC<MatchDetailProps> = ({
+    match: matchData,
+    commentary: commentaryData,
+    status = false,
+}) => {
+    const [match, setMatch] = useState<Match>(matchData);
+    const [commentary, setCommentary] = useState<Commentary[]>(
+        commentaryData || []
+    );
 
-  useEffect(() => {
-    const socket = io("http://localhost:3000", {
-      query: { matchId: match.matchId },
-    });
+    const handleNewCommentary = useCallback((newCommentary: Commentary) => {
+        setCommentary((prev) => [newCommentary, ...prev]);
+    }, []);
 
-    socket.on("new-commentary", (newCommentary: Commentary) => {
-      console.log(newCommentary);
-      
-      setCommentary((prevCommentary) => [newCommentary, ...prevCommentary]);
-    });
+    const handleUpdateMatch = useCallback((updatedMatch: Match) => {
+        setMatch(updatedMatch);
+    }, []);
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [match.matchId]);
+    useMatchSocket(match.matchId, handleNewCommentary, handleUpdateMatch);
 
-  if (!match) {
-    return <Loader />;
-  }
-
-  return (
-    <div className="matchContainer">
-      <MatchInfoCard match={match} />
-      <CommentaryFeed commentary={commentary} />
-    </div>
-  );
+    return (
+        <div className="matchContainer">
+            <MatchInfoCard match={match} />
+            <CommentaryFeed commentary={commentary} />
+            {status && <MatchStatus match={match} />}
+        </div>
+    );
 };
 
 export default MatchDetail;
