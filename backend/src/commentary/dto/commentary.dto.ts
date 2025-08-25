@@ -9,7 +9,7 @@ import {
 export class MatchCommentaryDto {
   @IsNumber()
   @IsPositive()
-  teamId: number;
+  team: number;
 
   @IsNumber()
   @IsPositive()

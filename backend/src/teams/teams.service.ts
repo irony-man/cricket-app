@@ -32,7 +32,7 @@ export class TeamsService {
     if (!team) {
       throw new NotFoundException(`Team with ID ${teamId} not found`);
     }
-    return team;
+    return team.populate('players');
   }
 
   async findAll(): Promise<Team[]> {

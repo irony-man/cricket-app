@@ -118,15 +118,22 @@ export class MatchesService {
   ): Promise<{ match: Match; commentary: Commentary[] }> {
     const match = await this.matchModel
       .findOne({ matchId })
-      .populate('teams')
-      .populate('toss.winner')
+      .populate([
+        { path: 'toss.winner' },
+        {
+          path: 'teams',
+          populate: {
+            path: 'players',
+          },
+        },
+      ])
       .exec();
     if (!match) {
       throw new NotFoundException(`Match with ID ${matchId} not found`);
     }
     const commentary =
       await this.commentaryService.findRecentByMatchId(matchId);
-    const response = { match, commentary: commentary.reverse() };
+    const response = { match, commentary: commentary };
     return response;
   }
 

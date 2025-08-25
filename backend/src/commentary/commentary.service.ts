@@ -32,8 +32,14 @@ export class CommentaryService {
   ) {}
 
   async create(createCommentaryDto: CreateCommentaryDto): Promise<Commentary> {
-    const { matchId, teamId, striker, non_striker, bowler, ...details } =
-      createCommentaryDto;
+    const {
+      matchId,
+      team: teamId,
+      striker,
+      non_striker,
+      bowler,
+      ...details
+    } = createCommentaryDto;
 
     const [match, team, players] = await Promise.all([
       this.matchModel.findOne({ matchId }).populate('teams').exec(),
@@ -90,7 +96,9 @@ export class CommentaryService {
       bowler: bowlerDoc?._id,
     });
 
-    const savedCommentary = await newCommentary.save();
+    const savedCommentary = await (
+      await newCommentary.save()
+    ).populate(['match', 'team', 'striker', 'non_striker', 'bowler']);
 
     const redisPublisher = this.redisService.getPublisher();
     const cacheKey = this.COMMENTARY_CACHE_KEY(matchId);
@@ -100,13 +108,7 @@ export class CommentaryService {
     await redisPublisher.lTrim(cacheKey, 0, this.COMMENTARY_CACHE_SIZE - 1);
     void redisPublisher.publish('commentary-updates', JSON.stringify(payload));
 
-    return savedCommentary.populate([
-      'match',
-      'team',
-      'striker',
-      'non_striker',
-      'bowler',
-    ]);
+    return savedCommentary;
   }
 
   async findByMatchId(matchId: number): Promise<Commentary[]> {
@@ -114,17 +116,34 @@ export class CommentaryService {
     if (!match) {
       throw new NotFoundException(`Match with ID ${matchId} not found.`);
     }
-    return this.commentaryModel
+    const commentaries = await this.commentaryModel
       .find({ match: match._id })
       .populate(['team', 'striker', 'non_striker', 'bowler'])
       .sort({ createdAt: -1 })
       .exec();
+
+    if (commentaries && commentaries.length) {
+      const redisPublisher = this.redisService.getPublisher();
+      const cacheKey = this.COMMENTARY_CACHE_KEY(matchId);
+      await redisPublisher.del(cacheKey);
+
+      await redisPublisher.rPush(
+        cacheKey,
+        commentaries.map((c) => JSON.stringify({ ...c.toJSON(), matchId })),
+      );
+      await redisPublisher.lTrim(cacheKey, 0, this.COMMENTARY_CACHE_SIZE - 1);
+    }
+
+    return commentaries;
   }
 
   async findRecentByMatchId(matchId: number): Promise<any[]> {
     const redisClient = this.redisService.getPublisher();
     const cacheKey = this.COMMENTARY_CACHE_KEY(matchId);
     const cachedData = await redisClient.lRange(cacheKey, 0, -1);
+    if (!cachedData || cachedData.length === 0) {
+      return await this.findByMatchId(matchId);
+    }
     return cachedData.map((item) => JSON.parse(item));
   }
 }

@@ -3,10 +3,6 @@
 
 */node_modules/
 
-# Frontend
-# Ignore a general 'frontend' directory if your frontend code is separate.
-frontend/
-
 # Ignore common frontend build output directories.
 /build/
 /dist/
